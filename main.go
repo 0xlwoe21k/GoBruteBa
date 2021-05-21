@@ -14,5 +14,5 @@ func main() {
 	//log.Fatalln()
 	Run.Run(os.Args)
 
-	fmt.Println("[*] running time:", time.Since(t))
+	fmt.Println("[*] run time:", time.Since(t))
 }
