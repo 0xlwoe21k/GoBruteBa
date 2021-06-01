@@ -1,0 +1,95 @@
+resolvers:
+    - 1.1.1.1
+    - 1.0.0.1
+sources:
+    - alienvault
+    - anubis
+    - bufferover
+    - certspotter
+    - censys
+    - chaos
+    - crtsh
+    - dnsdumpster
+    - hackertarget
+    - intelx
+    - passivetotal
+    - robtex
+    - riddler
+    - securitytrails
+    - shodan
+    - spyse
+    - sublist3r
+    - threatcrowd
+    - threatminer
+    - virustotal
+all-sources:
+    - alienvault
+    - anubis
+    - archiveis
+    - binaryedge
+    - bufferover
+    - censys
+    - certspotter
+    - chaos
+    - commoncrawl
+    - crtsh
+    - dnsdumpster
+    - dnsdb
+    - github
+    - hackertarget
+    - intelx
+    - passivetotal
+    - rapiddns
+    - riddler
+    - recon
+    - robtex
+    - securitytrails
+    - shodan
+    - sitedossier
+    - sonarsearch
+    - spyse
+    - sublist3r
+    - threatbook
+    - threatcrowd
+    - threatminer
+    - virustotal
+    - waybackarchive
+    - zoomeye
+recursive:
+    - alienvault
+    - binaryedge
+    - bufferover
+    - certspotter
+    - crtsh
+    - dnsdumpster
+    - hackertarget
+    - passivetotal
+    - securitytrails
+    - sonarsearch
+    - sublist3r
+    - virustotal
+binaryedge:
+    - 0bf8919b-aab9-42e4-9574-d3b639324597
+    - ac244e2f-b635-4581-878a-33f4e79a2c13
+censys:
+    - ac244e2f-b635-4581-878a-33f4e79a2c13:dd510d6e-1b6e-4655-83f6-f347b363def9
+certspotter: []
+chaos: []
+dnsdb: []
+github:
+    - d23a554bbc1aabb208c9acfbd2dd41ce7fc9db39
+    - asdsd54bbc1aabb208c9acfbd2dd41ce7fc9db39
+intelx: []
+passivetotal:
+    - sample-email@user.com:sample_password
+recon: []
+robtex: []
+securitytrails: []
+shodan:
+    - AAAAClP1bJJSRMEYJazgwhJKrggRwKA
+spyse: []
+threatbook: []
+urlscan: []
+virustotal: []
+zoomeye: []
+subfinder-version: 2.4.8
