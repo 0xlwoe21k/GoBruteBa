@@ -33,6 +33,7 @@ func Run(cmd []string) {
 	wdsCmd.IntVar(&wdsi.ThreadNum, "thread", 20, "set thread num.")
 	wdsCmd.StringVar(&wdsi.Proxy, "proxy", "", "set proxy. (usage:--proxy http://127.0.0.1:8080)")
 	wdsCmd.StringVar(&wdsi.UserAgent, "ua", "", "set http request User Agent.")
+	wdsCmd.IntVar(&wdsi.Timeout, "timeout", 2, "set http request timeout")
 
 	sdsCmd := flag.NewFlagSet("sds", flag.ExitOnError)
 	options := &runner.Options{}

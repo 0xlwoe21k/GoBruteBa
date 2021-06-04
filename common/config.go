@@ -25,4 +25,5 @@ type WebDirScanInfo struct {
 	ThreadNum  int
 	Proxy      string
 	UserAgent  string
+	Timeout    int
 }

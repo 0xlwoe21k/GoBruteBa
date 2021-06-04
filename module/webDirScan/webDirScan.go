@@ -64,12 +64,12 @@ func WebDirScan(wdsi common.WebDirScanInfo) {
 				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 				MaxConnsPerHost:       0,
 				TLSHandshakeTimeout:   2 * time.Second,
-				ResponseHeaderTimeout: 2 * time.Second,
+				ResponseHeaderTimeout: time.Duration(wdsi.Timeout) * time.Second,
 				DisableKeepAlives:     false,
 			}
 			tmpClient := &http.Client{
 				Transport: tr,
-				Timeout:   2 * time.Second,
+				Timeout:   time.Duration(wdsi.Timeout) * time.Second,
 			}
 			return tmpClient
 		},
@@ -183,9 +183,9 @@ func wdScan(tmpurl string, wdsi common.WebDirScanInfo) {
 		return
 	}
 
-	//if wdsi.UserAgent == "" {
-	//	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62")
-	//}
+	if wdsi.UserAgent == "" {
+		req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62")
+	}
 	req.Header.Add("User-Agent", wdsi.UserAgent)
 
 	client := getHttpConnect(wdsi)
@@ -199,7 +199,7 @@ func wdScan(tmpurl string, wdsi common.WebDirScanInfo) {
 
 	if resp.StatusCode == 200 {
 		//fmt.Printf("\x1b[1;40;32m%s\x1b[0m\n", tmpurl)
-		tResult = append(tResult, tmpurl+"【"+strconv.Itoa(int(resp.ContentLength))+"】")
+		tResult = append(tResult, tmpurl+"【content-length】【"+strconv.Itoa(int(resp.ContentLength))+"】")
 	} else if resp.StatusCode != 404 {
 		fResult = append(fResult, "[*] ["+strconv.Itoa(resp.StatusCode)+"] "+tmpurl)
 	}
