@@ -2,18 +2,22 @@ package Run
 
 import (
 	"GoBruteBa/common"
+	fofa "GoBruteBa/module/fofaScan"
 	subDomainScan "GoBruteBa/module/subDomainScan"
 	"GoBruteBa/module/subDomainScan/source/runner"
+	"GoBruteBa/module/webAliveScan"
 	"GoBruteBa/module/webDirScan"
 	"flag"
 	"os"
 )
 
 var (
-	wdsi common.WebDirScanInfo
-	hi   common.HostInfo
-	sci  common.SystemConfigInfo
-	help string
+	wdsi      common.WebDirScanInfo
+	hi        common.HostInfo
+	sci       common.SystemConfigInfo
+	was       common.WebAliveScanInfo
+	fofaParam common.Fofa
+	help      string
 )
 
 //golog.SetLevel("debug")
@@ -34,6 +38,16 @@ func Run(cmd []string) {
 	wdsCmd.StringVar(&wdsi.Proxy, "proxy", "", "set proxy. (usage:--proxy http://127.0.0.1:8080)")
 	wdsCmd.StringVar(&wdsi.UserAgent, "ua", "", "set http request User Agent.")
 	wdsCmd.IntVar(&wdsi.Timeout, "timeout", 2, "set http request timeout")
+
+	wasCmd := flag.NewFlagSet("was", flag.ExitOnError)
+	wasCmd.StringVar(&was.Target, "t", "", "set target(url)")
+	wasCmd.StringVar(&was.DirPath, "dp", "", "set target path")
+	wasCmd.StringVar(&was.Proxy, "proxy", "", "set proxy. (usage:--proxy http://127.0.0.1:8080)")
+
+	fofaCmd := flag.NewFlagSet("fofa", flag.ExitOnError)
+	fofaCmd.StringVar(&fofaParam.Rule, "rule", "", "set fofa rule string")
+	fofaCmd.BoolVar(&fofaParam.Doamin, "domain", false, "get domain information via rule")
+	fofaCmd.BoolVar(&fofaParam.IP, "ip", false, "get domain information via rule")
 
 	sdsCmd := flag.NewFlagSet("sds", flag.ExitOnError)
 	options := &runner.Options{}
@@ -74,10 +88,14 @@ func Run(cmd []string) {
 		wdsCmd.Parse(cmd[2:])
 		webDirScan.WebDirScan(wdsi)
 	case "webalivescan", "was":
-		//do something
+		wasCmd.Parse(cmd[2:])
+		webAliveScan.WebAliveScan(was)
 	case "subdomainscan", "sds":
 		sdsCmd.Parse(cmd[2:])
 		subDomainScan.SubDomainScan(options)
+	case "fofa":
+		fofaCmd.Parse(cmd[2:])
+		fofa.GetInfoByRule(fofaParam)
 	case "help", "h":
 		Usage()
 		os.Exit(0)

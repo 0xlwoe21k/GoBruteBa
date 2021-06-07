@@ -32,12 +32,15 @@ COMMAND:
 	webdirscan, wds		Run a webdirscan task
 	webalivescan,was	Run a webalivescan task
 	subdomainscan,sds	scan subdomain via subfinder
+	fofa				get vuln doamin or ip via rule
 	help,h				help for GoBruteBa.
 
 EXAMPLE:
 	./GoBruteBa wds -t http://127.0.0.1  -thread 30
 	./GoBruteBa wds -t http://127.0.0.1  -dp ./ctf.txt -thread 30
 	./GoBruteBa sds -d http://example.com -confg confiy.yaml -all
+	./GoBruteBa was -dp target.txt
+	./GoBruteBa fofa -rule 'Shiro' -domain
 `)
 	flag.PrintDefaults()
 }

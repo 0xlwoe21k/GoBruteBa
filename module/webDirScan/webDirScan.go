@@ -232,7 +232,6 @@ func loadPathFile(FilePath string) ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		return dirpath, err
 	}
-	file.Close()
 	return dirpath, err
 }
 

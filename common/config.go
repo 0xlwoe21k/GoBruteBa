@@ -27,3 +27,15 @@ type WebDirScanInfo struct {
 	UserAgent  string
 	Timeout    int
 }
+
+type WebAliveScanInfo struct {
+	Target  string
+	DirPath string
+	Proxy   string
+}
+
+type Fofa struct {
+	Rule   string
+	Doamin bool
+	IP     bool
+}
