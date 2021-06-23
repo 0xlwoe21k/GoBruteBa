@@ -17,11 +17,11 @@ func GetInfoByRule(param common.Fofa) {
 	_rule := param.Rule
 	var baseUrl string
 	if param.Doamin {
-		baseUrl = "https://fofa.so/api/v1/search/all?email=zjgelen@gmail.com&key=32a24b1e1af2b70c108facf54b899918&qbase64=%s&page=1&size=10&fields=domain"
+		baseUrl = "https://fofa.so/api/v1/search/all?email=zjgelen@gmail.com&key=&qbase64=%s&page=1&size=10&fields=domain"
 	} else if param.IP {
-		baseUrl = "https://fofa.so/api/v1/search/all?email=zjgelen@gmail.com&key=32a24b1e1af2b70c108facf54b899918&qbase64=%s&page=1&size=10&fields=ip"
+		baseUrl = "https://fofa.so/api/v1/search/all?email=zjgelen@gmail.com&key=&qbase64=%s&page=1&size=10&fields=ip"
 	} else {
-		baseUrl = "https://fofa.so/api/v1/search/all?email=zjgelen@gmail.com&key=32a24b1e1af2b70c108facf54b899918&qbase64=%s&page=1&size=10&fields=host"
+		baseUrl = "https://fofa.so/api/v1/search/all?email=zjgelen@gmail.com&key=&qbase64=%s&page=1&size=10&fields=host"
 	}
 
 	_rule_b64str := base64.StdEncoding.EncodeToString([]byte(_rule))
