@@ -2,35 +2,61 @@ package fofa
 
 import (
 	"GoBruteBa/common"
+	"GoBruteBa/module/config"
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"github.com/kataras/golog"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"time"
 )
 
-func GetInfoByRule(param common.Fofa) {
+func GetInfoByRule(param common.FofaType) {
 	_rule := param.Rule
 	var baseUrl string
-	if param.Doamin {
-		baseUrl = "https://fofa.so/api/v1/search/all?email=zjgelen@gmail.com&key=32a24b1e1af2b70c108facf54b899918&qbase64=%s&page=1&size=10&fields=domain"
-	} else if param.IP {
-		baseUrl = "https://fofa.so/api/v1/search/all?email=zjgelen@gmail.com&key=32a24b1e1af2b70c108facf54b899918&qbase64=%s&page=1&size=10&fields=ip"
-	} else {
-		baseUrl = "https://fofa.so/api/v1/search/all?email=zjgelen@gmail.com&key=32a24b1e1af2b70c108facf54b899918&qbase64=%s&page=1&size=10&fields=host"
+	var fofaKey string
+	var fofaEmail string
+	//从配置文件读取key
+	yamlFile, err := ioutil.ReadFile("config.yaml")
+	if err != nil {
+		golog.Error("cannot found config.yaml.please create it. err:", err)
+		return
+	}
+	cfg := new(config.Cfg)
+	err = yaml.Unmarshal(yamlFile, cfg)
+	if err != nil {
+		golog.Error("fofa.go line 26 err:", err)
+		return
 	}
 
-	_rule_b64str := base64.StdEncoding.EncodeToString([]byte(_rule))
-	baseUrl = fmt.Sprintf(baseUrl, _rule_b64str)
+	fofaEmail = cfg.Fofa.Email
+	fofaKey = cfg.Fofa.Key
 
-	//fmt.Println(baseUrl)
-	p := func(_ *http.Request) (*url.URL, error) { return url.Parse("http://127.0.0.1:8080") }
-	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, Proxy: p}
-	client := http.Client{Timeout: 3 * time.Second, Transport: tr}
+	_rule_b64str := base64.StdEncoding.EncodeToString([]byte(_rule))
+
+	if param.Title && param.Doamin {
+		baseUrl = fmt.Sprintf("https://fofa.so/api/v1/search/all?email=%s&key=%s&qbase64=%s&page=1&size=10000&fields=domain,title", fofaEmail, fofaKey, _rule_b64str)
+	} else if param.Title && param.IP {
+		baseUrl = fmt.Sprintf("https://fofa.so/api/v1/search/all?email=%s&key=%s&qbase64=%s&page=1&size=10000&fields=ip,title", fofaEmail, fofaKey, _rule_b64str)
+	} else if param.Title && param.Host {
+		baseUrl = fmt.Sprintf("https://fofa.so/api/v1/search/all?email=%s&key=%s&qbase64=%s&page=1&size=10000&fields=host,title", fofaEmail, fofaKey, _rule_b64str)
+	} else if param.IP {
+		baseUrl = fmt.Sprintf("https://fofa.so/api/v1/search/all?email=%s&key=%s&qbase64=%s&page=1&size=10000&fields=ip", fofaEmail, fofaKey, _rule_b64str)
+	} else if param.Doamin {
+		baseUrl = fmt.Sprintf("https://fofa.so/api/v1/search/all?email=%s&key=%s&qbase64=%s&page=1&size=10000&fields=domain", fofaEmail, fofaKey, _rule_b64str)
+	} else if param.Title {
+		baseUrl = fmt.Sprintf("https://fofa.so/api/v1/search/all?email=%s&key=%s&qbase64=%s&page=1&size=10000&fields=title", fofaEmail, fofaKey, _rule_b64str)
+	} else {
+		baseUrl = fmt.Sprintf("https://fofa.so/api/v1/search/all?email=%s&key=%s&qbase64=%s&page=1&size=10000&fields=host", fofaEmail, fofaKey, _rule_b64str)
+	}
+
+	//p := func(_ *http.Request) (*url.URL, error) { return url.Parse("http://127.0.0.1:8080") }
+	//tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, Proxy: p}
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	client := http.Client{Timeout: 5 * time.Second, Transport: tr}
 
 	resp, err := client.Get(baseUrl)
 	if err != nil {
@@ -46,12 +72,15 @@ func GetInfoByRule(param common.Fofa) {
 
 	jsdata, _ := simplejson.NewJson(body)
 	results, err := jsdata.Get("results").Array()
+	if err != nil {
+		fmt.Println(jsdata.Get("errmsg"))
+	}
+	fmt.Println("[+] rule:", param.Rule)
+	fmt.Println("[+] total result:", len(results))
 	fmt.Println("------------------------------ressults------------------------------")
 	for _, v := range results {
 		fmt.Println(v)
 	}
 	fmt.Println("--------------------------------------------------------------------")
-
-	//fmt.Println(string(body))
 
 }

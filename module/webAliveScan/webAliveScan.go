@@ -17,12 +17,19 @@ import (
 	"time"
 )
 
-var clinet [20]*http.Client
-var httpPool *sync.Pool
-var fproxy string
+var (
+	clinet   [20]*http.Client
+	httpPool *sync.Pool
+	fproxy   string
+	tr       *http.Transport
+)
 
-func WebAliveScan(was common.WebAliveScanInfo) {
+func WebAliveScan(was common.WebAliveScanType) {
 	wg := new(sync.WaitGroup)
+	if was.Proxy != "" {
+		p := func(_ *http.Request) (*url.URL, error) { return url.Parse("http://127.0.0.1:8080") }
+		tr.Proxy = p
+	}
 	if was.Target != "" {
 		webAliveScanSingle(was)
 	} else {
@@ -41,12 +48,12 @@ func handlerParam(targets []string, targetchan chan string, wg *sync.WaitGroup) 
 }
 
 func init() {
-	p := func(_ *http.Request) (*url.URL, error) { return url.Parse("http://127.0.0.1:8080") }
-	tr := &http.Transport{
-		Proxy:               p,
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
-		TLSHandshakeTimeout: 8 * time.Second,
-		DisableKeepAlives:   false,
+	tr = &http.Transport{
+		//Proxy:               p,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		TLSHandshakeTimeout:   8 * time.Second,
+		ResponseHeaderTimeout: 4 * time.Second,
+		DisableKeepAlives:     false,
 	}
 
 	httpPool = &sync.Pool{
@@ -72,7 +79,7 @@ func getHttpClient() *http.Client {
 	return httpPool.Get().(*http.Client)
 }
 
-func webAliveScanMulti(was common.WebAliveScanInfo, wg *sync.WaitGroup) {
+func webAliveScanMulti(was common.WebAliveScanType, wg *sync.WaitGroup) {
 	targetchan := make(chan string, 10)
 	threadNo := 20
 
@@ -100,36 +107,43 @@ func webAliveScanMulti(was common.WebAliveScanInfo, wg *sync.WaitGroup) {
 
 				resp, err := Client.Do(req)
 				if err != nil {
-					//golog.Error("webAliveScan.go line:83 ",err)
 					t, ok = <-targetchan
 					continue
 				}
 				httpPool.Put(Client)
+				//发送一个不存在的页面来获取指纹信息
+				//req.URL,err = url.Parse(t+"/_gobruteba")
+				//if err != nil {
+				//	t, ok = <-targetchan
+				//	continue
+				//}
+				//respSec, err := Client.Do(req)
 				handlerResult(resp, t)
-
 				t, ok = <-targetchan
 			}
 			wg.Done()
 		}(targetchan, wg)
 	}
-
 }
 
 func handlerResult(resp *http.Response, t string) {
-	var resultstring string = "URL[" + t + "]"
+	var resultstring string = " URL[\x1b[36m" + t + "\x1b[0m]"
 	Status := strconv.Itoa(resp.StatusCode)
-	resultstring = resultstring + " Status[" + Status + "]"
+	resultstring = resultstring + " Status[\x1b[35m" + Status + "\x1b[0m]"
 	Length := strconv.Itoa(int(resp.ContentLength))
-	resultstring = resultstring + " Length[" + Length + "]"
+	if Length != "-1" {
+		resultstring = resultstring + " Length[\x1b[34m" + Length + "\x1b[0m]"
+	}
+
 	serv := resp.Header.Get("Server")
 	if serv != "" {
-		resultstring = resultstring + " Server[" + serv + "]"
+		resultstring = resultstring + " Server[\x1b[33m" + serv + "\x1b[0m]"
 	}
 
 	Cookie := resp.Header.Get("Set-Cookie")
 	if Cookie != "" {
 		if strings.Contains(Cookie, "rememberMe") {
-			resultstring = resultstring + " Application[Shiro]"
+			resultstring = resultstring + " Application[\x1b[32mShiro\x1b[0m]]"
 		}
 	}
 
@@ -145,30 +159,37 @@ func handlerResult(resp *http.Response, t string) {
 		}
 	}
 	if title != "" {
-		resultstring = resultstring + " Title[" + title + "]"
+		resultstring = resultstring + " Title[\x1b[32m" + title + "\x1b[0m]"
 	}
+	//指纹处理
+	//body, err = ioutil.ReadAll(resp.Body)
+	//if err == nil {
+	//
+	//
+	//}
 
-	//log(resultstring)
 	log.Println(resultstring)
 }
 
-func webAliveScanSingle(was common.WebAliveScanInfo) {
+func webAliveScanSingle(was common.WebAliveScanType) {
 	_url := was.Target
 	//var localProxy *url.URL
 	var tr *http.Transport
 	if was.Proxy != "" {
 		localProxy := func(_ *http.Request) (*url.URL, error) { return url.Parse(was.Proxy) }
 		tr = &http.Transport{
-			Proxy:               localProxy,
-			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
-			TLSHandshakeTimeout: time.Duration(2) * time.Second,
-			DisableKeepAlives:   false,
+			Proxy:                 localProxy,
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+			TLSHandshakeTimeout:   time.Duration(2) * time.Second,
+			ResponseHeaderTimeout: 4 * time.Second,
+			DisableKeepAlives:     false,
 		}
 	} else {
 		tr = &http.Transport{
-			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
-			TLSHandshakeTimeout: time.Duration(2) * time.Second,
-			DisableKeepAlives:   false,
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+			TLSHandshakeTimeout:   time.Duration(2) * time.Second,
+			ResponseHeaderTimeout: 4 * time.Second,
+			DisableKeepAlives:     false,
 		}
 	}
 

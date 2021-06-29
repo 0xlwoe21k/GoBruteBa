@@ -2,6 +2,7 @@ package Run
 
 import (
 	"GoBruteBa/common"
+	"GoBruteBa/module/config"
 	fofa "GoBruteBa/module/fofaScan"
 	subDomainScan "GoBruteBa/module/subDomainScan"
 	"GoBruteBa/module/subDomainScan/source/runner"
@@ -12,11 +13,12 @@ import (
 )
 
 var (
-	wdsi      common.WebDirScanInfo
-	hi        common.HostInfo
-	sci       common.SystemConfigInfo
-	was       common.WebAliveScanInfo
-	fofaParam common.Fofa
+	wdsi      common.WebDirScanType
+	hi        common.HostInfoType
+	cfg       common.SystemConfigType
+	was       common.WebAliveScanType
+	fofaParam common.FofaType
+	edt       common.EncodeDecodeType
 	help      string
 )
 
@@ -32,22 +34,33 @@ var (
 func Run(cmd []string) {
 	Banner()
 	wdsCmd := flag.NewFlagSet("wds", flag.ExitOnError)
-	wdsCmd.StringVar(&wdsi.Target, "t", "", "set a target")
-	wdsCmd.StringVar(&wdsi.DirPath, "dp", "", "set dirpath")
-	wdsCmd.IntVar(&wdsi.ThreadNum, "thread", 20, "set thread num.")
+	wdsCmd.StringVar(&wdsi.Target, "u", "", "set a target(url)")
+	wdsCmd.StringVar(&wdsi.TargetDirPath, "tF", "", "set multil target dirpath")
+	wdsCmd.StringVar(&wdsi.PayloadDirPath, "pF", "", "set payload dirpath")
+	wdsCmd.IntVar(&wdsi.ThreadNum, "thread", 30, "set thread num.")
 	wdsCmd.StringVar(&wdsi.Proxy, "proxy", "", "set proxy. (usage:--proxy http://127.0.0.1:8080)")
 	wdsCmd.StringVar(&wdsi.UserAgent, "ua", "", "set http request User Agent.")
 	wdsCmd.IntVar(&wdsi.Timeout, "timeout", 2, "set http request timeout")
 
 	wasCmd := flag.NewFlagSet("was", flag.ExitOnError)
 	wasCmd.StringVar(&was.Target, "t", "", "set target(url)")
-	wasCmd.StringVar(&was.DirPath, "dp", "", "set target path")
+	wasCmd.StringVar(&was.DirPath, "tF", "", "set target file path")
 	wasCmd.StringVar(&was.Proxy, "proxy", "", "set proxy. (usage:--proxy http://127.0.0.1:8080)")
+
+	edtCmd := flag.NewFlagSet("edc", flag.ExitOnError)
+	edtCmd.StringVar(&was.Target, "t", "", "set target(url)")
+	edtCmd.StringVar(&was.DirPath, "tF", "", "set target file path")
+	edtCmd.StringVar(&was.Proxy, "proxy", "", "set proxy. (usage:--proxy http://127.0.0.1:8080)")
 
 	fofaCmd := flag.NewFlagSet("fofa", flag.ExitOnError)
 	fofaCmd.StringVar(&fofaParam.Rule, "rule", "", "set fofa rule string")
 	fofaCmd.BoolVar(&fofaParam.Doamin, "domain", false, "get domain information via rule")
 	fofaCmd.BoolVar(&fofaParam.IP, "ip", false, "get domain information via rule")
+	fofaCmd.BoolVar(&fofaParam.Title, "title", false, "get title information via rule")
+	fofaCmd.BoolVar(&fofaParam.Host, "host", false, "get host information via rule")
+
+	cfgCmd := flag.NewFlagSet("cfg", flag.ExitOnError)
+	cfgCmd.BoolVar(&cfg.GenConfig, "new", false, "create default config file.")
 
 	sdsCmd := flag.NewFlagSet("sds", flag.ExitOnError)
 	options := &runner.Options{}
@@ -74,8 +87,6 @@ func Run(cmd []string) {
 	sdsCmd.StringVar(&options.ResolverList, "rL", "", "Text file containing list of resolvers to use")
 	sdsCmd.BoolVar(&options.RemoveWildcard, "nW", false, "Remove Wildcard & Dead Subdomains from output")
 	sdsCmd.StringVar(&options.ConfigFile, "config", "config.yaml", "Configuration file for API Keys, etc")
-	sdsCmd.BoolVar(&options.NewConfigFile, "gconfig", false, "create default config.yaml.")
-
 	sdsCmd.BoolVar(&options.Version, "version", false, "Show version of subfinder")
 
 	if len(cmd) < 2 {
@@ -96,6 +107,9 @@ func Run(cmd []string) {
 	case "fofa":
 		fofaCmd.Parse(cmd[2:])
 		fofa.GetInfoByRule(fofaParam)
+	case "cfg":
+		cfgCmd.Parse(cmd[2:])
+		config.NewConfig(cfg)
 	case "help", "h":
 		Usage()
 		os.Exit(0)

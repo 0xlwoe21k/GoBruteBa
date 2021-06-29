@@ -1,6 +1,6 @@
 package common
 
-type HostInfo struct {
+type HostInfoType struct {
 	Host      string
 	Ports     string
 	Domain    string
@@ -14,28 +14,38 @@ type HostInfo struct {
 	Passwords []string
 }
 
-type SystemConfigInfo struct {
-	ThreadNum int
+type SystemConfigType struct {
+	GenConfig bool
+	//ThreadNum int
 }
 
-type WebDirScanInfo struct {
-	Target     string
-	DirPath    string
-	BuildInDir []string
-	ThreadNum  int
-	Proxy      string
-	UserAgent  string
-	Timeout    int
+type WebDirScanType struct {
+	Target         string
+	TargetDirPath  string
+	PayloadDirPath string
+	BuildInDir     []string
+	ThreadNum      int
+	Proxy          string
+	UserAgent      string
+	Timeout        int
 }
 
-type WebAliveScanInfo struct {
+type WebAliveScanType struct {
 	Target  string
 	DirPath string
 	Proxy   string
 }
 
-type Fofa struct {
+type EncodeDecodeType struct {
+	Target  string
+	DirPath string
+	Proxy   string
+}
+
+type FofaType struct {
 	Rule   string
 	Doamin bool
 	IP     bool
+	Title  bool
+	Host   bool
 }

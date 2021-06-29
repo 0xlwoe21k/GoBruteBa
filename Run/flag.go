@@ -37,9 +37,9 @@ COMMAND:
 
 EXAMPLE:
 	./GoBruteBa wds -t http://127.0.0.1  -thread 30
-	./GoBruteBa wds -t http://127.0.0.1  -dp ./ctf.txt -thread 30
+	./GoBruteBa wds -t http://127.0.0.1  -fF ./ctf.txt -thread 30
 	./GoBruteBa sds -d http://example.com -confg confiy.yaml -all
-	./GoBruteBa was -dp target.txt
+	./GoBruteBa was -fF target.txt
 	./GoBruteBa fofa -rule 'Shiro' -domain
 `)
 	flag.PrintDefaults()
