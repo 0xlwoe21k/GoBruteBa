@@ -29,10 +29,11 @@ USAGE:
 	GoBruteBa [global options] command [command options] [arguments...]
 
 COMMAND:
-	webdirscan, wds		Run a webdirscan task
-	webalivescan,was	Run a webalivescan task
-	subdomainscan,sds	scan subdomain via subfinder
+	webdirscan, wds		Run a web dir scan task
+	webalivescan,was	Run a web alive scan task
+	subdomainscan,sds	scan and brute subdomain via subfinder
 	fofa				get vuln doamin or ip via rule
+	cfg					new config file.
 	help,h				help for GoBruteBa.
 
 EXAMPLE:
@@ -41,6 +42,9 @@ EXAMPLE:
 	./GoBruteBa sds -d http://example.com -confg confiy.yaml -all
 	./GoBruteBa was -fF target.txt
 	./GoBruteBa fofa -rule 'Shiro' -domain
+
+NOTICE:
+	first run. need create config.yaml use 'cfg' option.(usage:GoBurteBa cfg --new).
 `)
 	flag.PrintDefaults()
 }

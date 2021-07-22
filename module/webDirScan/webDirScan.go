@@ -195,6 +195,7 @@ func WebDirScan(wdsi common.WebDirScanType) {
 	if len(fResult)+len(tResult) > 0 {
 		handResult()
 	} else {
+		fmt.Println()
 		golog.Info("nothing found.")
 	}
 }
@@ -305,7 +306,7 @@ func wdScan(tmpurl string, wdsi common.WebDirScanType) {
 		return
 	}
 	if resp.StatusCode == 200 {
-		//fmt.Println("\nStatus[\x1b[32m200\x1b[0m]"+" URL[\x1b[36m" + tmpurl + "\x1b[0m]")
+		fmt.Println("\n\x1b[36m" + tmpurl + "\x1b[0m")
 		res := "Status[\x1b[32m200\x1b[0m]" + " URL[\x1b[36m" + tmpurl + "\x1b[0m]" + " [content-length][" + strconv.Itoa(int(resp.ContentLength)) + "]"
 		tResult = append(tResult, res)
 	} else if resp.StatusCode != 404 {

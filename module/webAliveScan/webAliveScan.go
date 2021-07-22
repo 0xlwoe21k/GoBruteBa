@@ -229,8 +229,13 @@ func readTargetFromFile(path string) []string {
 		line = scanner.Text()
 		if !strings.Contains(line, "http") {
 			line = "http://" + line
+			dirpath = append(dirpath, line)
+			line = "https://" + line
+			dirpath = append(dirpath, line)
+		} else {
+			dirpath = append(dirpath, line)
 		}
-		dirpath = append(dirpath, line)
+
 	}
 	if err := scanner.Err(); err != nil {
 		golog.Error("[webAliveScan.go line:209]", err)

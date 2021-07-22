@@ -44,8 +44,8 @@ passivetotal:
   - sample-email@user.com:sample_password
 securitytrails: []
 fofa:
-    email: zjgelen@gmail.com
-    key: 32a24b1e1af2b70c108facf54b899918
+    email: your@email.com
+    key: yourKey
 shodan:
   - AAAAClP1bJJSRMEYJazgwhJKrggRwKA
 github:
