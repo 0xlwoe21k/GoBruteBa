@@ -21,48 +21,63 @@ import (
 
 var local_wdsi common.WebDirScanType
 
+type ScanResult struct {
+	Status        int
+	domain        string
+	URL           string
+	ContentLength int64
+}
+
+type chTarget struct {
+	WholeUrl string
+	target   string
+}
+
 var (
-	err      error
-	wg       sync.WaitGroup
-	payload  chan string
-	tr       *http.Transport
-	httpPool *sync.Pool
-	tResult  []string
-	fResult  []string
-	chTarget chan string
-	chErr    chan string
-	bar      *progressbar.ProgressBar
+	err         error
+	wg          sync.WaitGroup
+	payload     chan string
+	tr          *http.Transport
+	httpPool    *sync.Pool
+	otherResult []ScanResult
+	OpenResult  []ScanResult
+	chtar       chan chTarget
+	chErr       chan string
+	bar         *progressbar.ProgressBar
 )
 
 func handResult() {
+	//结果去重两个指标,1.域名一样 2.长度一样,算是重复
 	fmt.Printf("%s\n", "\n|--------------------------------------OTHER RESULT-----------------------------------|\n")
-	for _, vaule := range fResult {
-		fmt.Printf("%s\n", vaule)
+	//var onlyOne map[string]int
+
+	for _, vaule := range otherResult {
+		fmt.Printf("status[%d] URL[%s] length[%d]\n", vaule.Status, vaule.URL, vaule.ContentLength)
 	}
 	fmt.Printf("%s\n", "\n|--------------------------------------OTHER RESULT-----------------------------------|\n")
 
 	fmt.Printf("\x1b[1;32m%s\x1b[0m\n", "\n|-------------------------------------【200】RESULT---------------------------------|\n")
-	for _, vaule := range tResult {
-		fmt.Printf("\x1b[1;40;36m%s\x1b[0m\n", vaule)
+	for _, vaule := range OpenResult {
+		fmt.Println("Status[\x1b[32m200\x1b[0m]" + " URL[\x1b[36m" + vaule.URL + "\x1b[0m]" + " [content-length][" + strconv.Itoa(int(vaule.ContentLength)) + "]")
+
 	}
 	fmt.Printf("\x1b[1;32m%s\x1b[0m\n", "\n|----------------------------------------RESULT-------------------------------------|\n")
 }
 
-func WebDirScan(wdsi common.WebDirScanType) {
+func WebDirScan(wdsi common.WebDirScanType, rCtx context.Context) {
 	local_wdsi = wdsi
-	chTarget = make(chan string, 20)
+	chtar = make(chan chTarget, 10)
 	chErr = make(chan string)
 	var payloads []string
 
-	ctx, cancel := context.WithCancel(context.Background())
+	subCtx, cancel := context.WithCancel(rCtx)
 
-	//fmt.Println(wdsi.TargetDirPath)
 	if wdsi.Target == "" && wdsi.TargetDirPath == "" {
 		golog.Error("scan target is required.")
 		return
 	}
 
-	go errorLog(ctx)
+	go errorLog(subCtx)
 
 	httpPool = &sync.Pool{
 		New: func() interface{} {
@@ -87,13 +102,21 @@ func WebDirScan(wdsi common.WebDirScanType) {
 			golog.Error("[webDurScab.go line 86] ", err)
 			return
 		}
+	} else if wdsi.Payload != "" {
+		payloads = []string{wdsi.Payload}
 	} else {
-		payloads = []string{"actuator", "jenkins", "env", ".svn/entries", ".git", "source", "source.php", "source.php.bak", ".source.php.bak", "source.php.swp", "README.MD", ".gitignore", ".svn/entries", "user.php.bak", ".DS_store", "WEB-INF/web.xml", "WEB-INF/classes", "WEB-INF/database.propertie", "phpinfo.php", "robots.txt", ".htaccess", ".bash_history", ".svn", ".index.php.swp", "index.php.swp", "index.php.bak", "login.php", "register", "register.php", "test.php", "upload.php", "phpinfo.php", "www.zip", "www.rar", "www.zip", "www.7z", "www.tar.gz", "www.tar", "web.zip", "web.rar", "web.zip", "web.7z", "web.tar.gz", "web.tar", "log.txt", "wwwroot.rar", "web.rar", "dede", "admin", "edit", "Fckeditor", "ewebeditor", "Editor", "manage", "shopadmin", "web_Fckeditor", "login", "webadmin", "admin/WebEditor", "admin/daili/webedit", "login/", "database/", "tmp/", "manager/", "manage/", "web/", "admin/", "wp-includes/", "edit/", "editor/", "user/", "users/", "admin/", "home/", "test/", "backdoor/", "flag/", "upload/", "uploads/", "download/", "downloads/", "root.zip", "root.rar", "wwwroot.zip", "wwwroot.rar", "backup.zip", "backup.rar", ".git/config", ".ds_store", "login.php", "register.php", "upload.php", "home.php", "log.php", "logs.php", "config.php", "member.php", "user.php", "users.php", "robots.php", "info.php", "phpinfo.php", "backdoor.php", "mysql.bak", "dump.sql", "data.sql", "backup.sql", "backup.sql.gz", "backup.zip", "rss.xml", "crossdomain.xml", "1.txt", "flag.txt", "wp-config.php", "configuration.php", "sites/default/settings.php", "system/config/default.php", "lib", "includes/config.php", "test/", "backdoor/", "uploads/", "download/", "downloads/", "manager/", "phpmyadmin/", "phpMyAdmin/", "_async/AsyncResponseService"}
+		payloads = []string{"/service/actuator/././////12/../health", "/service/actuator/", ".well-known/apple-app-site-association", "/graphql", "/tenant/sources", "logs.html", "search.html", "WEB-INF", "druid", "monitoring", "actuator/env", "script", "jenkins", "env", ".svn/entries", "source", ".DS_store", "WEB-INF/web.xml", "phpinfo.php", "robots.txt", ".htaccess", ".bash_history", "login", "register", "test", "www.zip", "www.rar", "web.zip", "log.txt", "admin", "console", "edit", "manage", "webadmin", "database/", "tmp/", "wp-includes/", "home/", "upload/", "download/", "root.zip", "root.rar", "wwwroot.zip", ".git/config", ".bashrc", ".bash_history", ".ssh/authorized_keys", "backup.sql", "crossdomain.xml", "lib", "phpMyAdmin/", "_async/AsyncResponseService", "wls-wsat/CoordinatorPortType"}
+
 	}
 
 	payload = make(chan string, len(payloads))
 
-	golog.Info("target: ", wdsi.Target)
+	if wdsi.Target == "" {
+		golog.Info("target path: ", wdsi.TargetDirPath)
+
+	} else {
+		golog.Info("target: ", wdsi.Target)
+	}
 	golog.Info("thread num: ", wdsi.ThreadNum)
 	golog.Info("payload num: ", len(payloads))
 	golog.Info("webdirscan start...")
@@ -105,7 +128,7 @@ func WebDirScan(wdsi common.WebDirScanType) {
 	if wdsi.TargetDirPath != "" {
 		targets, err = handlerTargetFromPath(wdsi.TargetDirPath)
 		if err != nil {
-			golog.Error("[webDirScan.go] read target from file error! line: 94 err:", err)
+			golog.Error("[webDirScan.go] line:130 read target from file error! line: 94 err:", err)
 		}
 
 		option := progressbar.OptionSetTheme(progressbar.Theme{
@@ -120,26 +143,29 @@ func WebDirScan(wdsi common.WebDirScanType) {
 			progressbar.OptionEnableColorCodes(true),
 			progressbar.OptionShowCount())
 
-		go handTarget(chTarget, payloads, targets, cancel)
-		//var childCtx []context.Context
+		go handTarget(chtar, payloads, targets, cancel)
+
 		for i := 0; i < wdsi.ThreadNum; i++ {
 			wg.Add(1)
 
 			go func(tId int, wdsi common.WebDirScanType, ctx context.Context) {
 				//handler url
-				xctx := context.Context(ctx)
-				for {
+				var ok bool
+				var tg chTarget
+				tg, ok = <-chtar
+				for ok {
 					select {
-					case tg := <-chTarget:
-						_ = bar.Add(1)
-						wdScan(tg, wdsi)
+					case tg, ok = <-chtar:
+						bar.Add(1)
+						wdScan(tg.WholeUrl, tg.target, wdsi)
 
-					case <-xctx.Done():
+					case <-ctx.Done():
 						wg.Done()
 						return
 					}
 				}
-			}(i, wdsi, ctx)
+				wg.Done()
+			}(i, wdsi, subCtx)
 		}
 	} else if wdsi.Target != "" {
 		//后续再解偶
@@ -156,23 +182,23 @@ func WebDirScan(wdsi common.WebDirScanType) {
 			progressbar.OptionEnableColorCodes(true),
 			progressbar.OptionShowCount())
 
-		go handParam(payloads)
-		wg.Add(1)
+		go handParam(payloads, cancel)
 		for i := 0; i < wdsi.ThreadNum; i++ {
 			wg.Add(1)
-			go func(tId int, target string, wdsi common.WebDirScanType) {
+			go func(tId int, target string, wdsi common.WebDirScanType, ctx context.Context) {
 				for len(payload) > 0 {
 					select {
 					case Uri := <-payload:
 						_ = bar.Add(1)
 						var tmpurl string
+						var local_target string = target
 						if !strings.Contains(target, "http") {
-							target = "http://" + target
+							local_target = "http://" + local_target
 						}
-						if target[len(target)-1] == '/' {
-							tmpurl = target + Uri
+						if local_target[len(local_target)-1] == '/' {
+							tmpurl = local_target + Uri
 						} else {
-							tmpurl = target + "/" + Uri
+							tmpurl = local_target + "/" + Uri
 						}
 						oneurl := tmpurl[:7]
 						twourl := tmpurl[7:]
@@ -181,18 +207,22 @@ func WebDirScan(wdsi common.WebDirScanType) {
 							twourl = strings.Replace(twourl, "//", "/", -1)
 						}
 						tmpurl = oneurl + twourl
-						wdScan(tmpurl, wdsi)
+						wdScan(tmpurl, target, wdsi)
+					case <-ctx.Done():
+						//log.Println("recv parent context cancel signal web dir scan exit.")
+						wg.Done()
+						return
 					default:
 					}
 				}
 				wg.Done()
-			}(i, wdsi.Target, wdsi)
+			}(i, wdsi.Target, wdsi, subCtx)
 		}
 	}
 
 	wg.Wait()
 	//cancel()
-	if len(fResult)+len(tResult) > 0 {
+	if len(OpenResult)+len(otherResult) > 0 {
 		handResult()
 	} else {
 		fmt.Println()
@@ -245,7 +275,7 @@ func Generatehttpclient() {
 	for i := 0; i < 50; i++ {
 		tmpClient := &http.Client{
 			Transport: tr,
-			Timeout:   3 * time.Second,
+			Timeout:   2 * time.Second,
 		}
 		httpPool.Put(tmpClient)
 	}
@@ -276,7 +306,7 @@ func errorLog(ctx context.Context) {
 
 }
 
-func wdScan(tmpurl string, wdsi common.WebDirScanType) {
+func wdScan(tmpurl string, target string, wdsi common.WebDirScanType) {
 
 	req, err := http.NewRequest("HEAD", tmpurl, nil)
 	if err != nil {
@@ -290,69 +320,110 @@ func wdScan(tmpurl string, wdsi common.WebDirScanType) {
 		req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62")
 	}
 	req.Header.Add("User-Agent", wdsi.UserAgent)
-
 	client := getHttpConnect(wdsi)
-
 	resp, err := client.Do(req)
 	if err != nil {
-		//println(err)
-		//golog.Error("[webDirScan.go line:189] ", err.Error())
 		chErr <- err.Error()
 		return
 	}
 	httpPool.Put(client)
 
-	if resp.ContentLength == -1 || resp.ContentLength == 0 {
-		return
-	}
-	if resp.StatusCode == 200 {
-		fmt.Println("\n\x1b[36m" + tmpurl + "\x1b[0m")
-		res := "Status[\x1b[32m200\x1b[0m]" + " URL[\x1b[36m" + tmpurl + "\x1b[0m]" + " [content-length][" + strconv.Itoa(int(resp.ContentLength)) + "]"
-		tResult = append(tResult, res)
-	} else if resp.StatusCode != 404 {
-		//fmt.Println("\nStatus[\x1b[32m"+strconv.Itoa(resp.StatusCode)+"\x1b[0m]"+"URL[\x1b[36m" + tmpurl + "\x1b[0m]")
-		res := "Status[\x1b[32m" + resp.Status + "\x1b[0m]" + " URL[\x1b[36m" + tmpurl + "\x1b[0m]" + " [content-length][" + strconv.Itoa(int(resp.ContentLength)) + "]"
-		fResult = append(fResult, res)
-	}
-	//用完之后回收client
+	var tmpResult ScanResult
+	var countFlag bool = false
 
+	if resp.StatusCode == 200 {
+
+		tmpResult.domain = target
+		tmpResult.URL = tmpurl
+		tmpResult.Status = resp.StatusCode
+		tmpResult.ContentLength = resp.ContentLength
+
+		for _, v := range OpenResult {
+			if strings.Contains(v.domain, target) && (v.ContentLength == resp.ContentLength) {
+				countFlag = true
+			}
+		}
+		if !countFlag {
+			bar.Clear()
+			fmt.Println("\x1b[36m" + tmpurl + " --> " + strconv.Itoa(resp.StatusCode) + "    " + "size[" + strconv.Itoa(int(resp.ContentLength)) + "]" + "\x1b[0m")
+			OpenResult = append(OpenResult, tmpResult)
+		}
+
+	} else if resp.StatusCode == 301 || resp.StatusCode == 302 {
+		tmpResult.domain = target
+		tmpResult.URL = tmpurl
+		tmpResult.Status = resp.StatusCode
+		tmpResult.ContentLength = resp.ContentLength
+
+		for _, v := range otherResult {
+			if strings.Contains(v.domain, target) && (v.ContentLength == resp.ContentLength) {
+				countFlag = true
+			}
+		}
+		if !countFlag {
+			bar.Clear()
+			fmt.Println("\x1b[36m" + tmpurl + " --> " + strconv.Itoa(resp.StatusCode) + "    " + resp.Header.Get("Location") + "\x1b[0m")
+			otherResult = append(otherResult, tmpResult)
+		}
+	} else if resp.StatusCode != 404 {
+
+		tmpResult.domain = target
+		tmpResult.URL = tmpurl
+		tmpResult.Status = resp.StatusCode
+		tmpResult.ContentLength = resp.ContentLength
+
+		for _, v := range otherResult {
+			if strings.Contains(v.domain, target) && (v.ContentLength == resp.ContentLength) {
+				countFlag = true
+			}
+		}
+		if !countFlag {
+			bar.Clear()
+			fmt.Println("\x1b[36m" + tmpurl + " --> " + strconv.Itoa(resp.StatusCode) + "\x1b[0m")
+			otherResult = append(otherResult, tmpResult)
+		}
+	}
 	defer resp.Body.Close()
 }
 
-func handTarget(chTarget chan string, payloads []string, targets []string, cancel context.CancelFunc) {
+func handTarget(chtar chan chTarget, payloads []string, targets []string, cancel context.CancelFunc) {
 	for _, t := range targets {
 		for i := 0; i < len(payloads); i++ {
-
-			var tmpurl string
+			t = strings.TrimSpace(t)
+			var tmpurl chTarget
+			tmpurl.target = t
+			if strings.Contains(t, "443") {
+				t = "https://" + t
+			}
 			if !strings.Contains(t, "http") {
 				t = "https://" + t
 			}
 			if t[len(t)-1] == '/' {
-				tmpurl = t + payloads[i]
+				tmpurl.WholeUrl = t + payloads[i]
 			} else {
-				tmpurl = t + "/" + payloads[i]
+				tmpurl.WholeUrl = t + "/" + payloads[i]
 			}
-			oneurl := tmpurl[:7]
-			twourl := tmpurl[7:]
+			oneurl := tmpurl.WholeUrl[:7]
+			twourl := tmpurl.WholeUrl[7:]
 
-			if strings.Contains(tmpurl[7:], "//") {
+			if strings.Contains(tmpurl.WholeUrl[7:], "//") {
 				twourl = strings.Replace(twourl, "//", "/", -1)
 			}
-			tmpurl = oneurl + twourl
-
-			chTarget <- tmpurl
+			tmpurl.WholeUrl = oneurl + twourl
+			chtar <- tmpurl
 		}
 	}
-
-	time.Sleep(5 * time.Second)
-	defer cancel()
+	//time.Sleep(10)
+	close(chtar)
+	//cancel()
+	//time.Sleep(5 * time.Second)
 }
 
-func handParam(dirDic []string) {
+func handParam(dirDic []string, cancel context.CancelFunc) {
 	for _, dc := range dirDic {
 		payload <- dc
 	}
-	wg.Done()
+	//cancel()
 }
 
 func loadPathFile(FilePath string) ([]string, error) {

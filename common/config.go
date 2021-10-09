@@ -22,6 +22,7 @@ type SystemConfigType struct {
 type WebDirScanType struct {
 	Target         string
 	TargetDirPath  string
+	Payload        string
 	PayloadDirPath string
 	BuildInDir     []string
 	ThreadNum      int
@@ -34,6 +35,7 @@ type WebAliveScanType struct {
 	Target  string
 	DirPath string
 	Proxy   string
+	Out     string
 }
 
 type EncodeDecodeType struct {
@@ -48,4 +50,5 @@ type FofaType struct {
 	IP     bool
 	Title  bool
 	Host   bool
+	Out    string
 }

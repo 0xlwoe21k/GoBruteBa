@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -63,7 +64,7 @@ func GetInfoByRule(param common.FofaType) {
 		golog.Error("fofa.go line:30 ", err)
 		return
 	}
-	defer resp.Body.Close()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		golog.Error("fofa.go line:36 ", err)
@@ -73,14 +74,37 @@ func GetInfoByRule(param common.FofaType) {
 	jsdata, _ := simplejson.NewJson(body)
 	results, err := jsdata.Get("results").Array()
 	if err != nil {
-		fmt.Println(jsdata.Get("errmsg"))
+		s, _ := jsdata.Get("errmsg").String()
+		fmt.Println("[err] from fofa response " + s)
+		return
 	}
 	fmt.Println("[+] rule:", param.Rule)
 	fmt.Println("[+] total result:", len(results))
-	fmt.Println("------------------------------ressults------------------------------")
+	if param.Out != "" {
+		fmt.Println("[+] save path:", param.Out)
+	}
+
+	var fp *os.File
+	if param.Out != "" {
+		fp, err = os.OpenFile(param.Out, os.O_CREATE|os.O_RDWR, 744)
+		if err != nil {
+			golog.Error("fofa.go line:88 err:", err)
+		}
+		if len(results) > 0 {
+			for _, v := range results {
+				fp.WriteString(fmt.Sprintf("%v", v))
+				fp.WriteString("\n")
+			}
+		}
+	}
+
 	for _, v := range results {
 		fmt.Println(v)
 	}
-	fmt.Println("--------------------------------------------------------------------")
+
+	defer func() {
+		resp.Body.Close()
+		fp.Close()
+	}()
 
 }

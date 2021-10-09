@@ -4,10 +4,11 @@ import (
 	"GoBruteBa/common"
 	"GoBruteBa/module/config"
 	fofa "GoBruteBa/module/fofaScan"
-	subDomainScan "GoBruteBa/module/subDomainScan"
-	"GoBruteBa/module/subDomainScan/source/runner"
+	"GoBruteBa/module/subDomainScan/subfinder"
+	runner2 "GoBruteBa/module/subDomainScan/subfinder/source/runner"
 	"GoBruteBa/module/webAliveScan"
 	"GoBruteBa/module/webDirScan"
+	"context"
 	"flag"
 	"os"
 )
@@ -31,11 +32,12 @@ var (
 //golog.Debug("This is a debug message")
 //golog.Fatal(`Fatal will exit no matter what,
 
-func Run(cmd []string) {
+func Run(cmd []string, rootCtx context.Context) {
 	Banner()
 	wdsCmd := flag.NewFlagSet("wds", flag.ExitOnError)
-	wdsCmd.StringVar(&wdsi.Target, "u", "", "set a target(url)")
+	wdsCmd.StringVar(&wdsi.Target, "t", "", "set a target(url)")
 	wdsCmd.StringVar(&wdsi.TargetDirPath, "tF", "", "set multil target dirpath")
+	wdsCmd.StringVar(&wdsi.Payload, "p", "", "set payload")
 	wdsCmd.StringVar(&wdsi.PayloadDirPath, "pF", "", "set payload dirpath")
 	wdsCmd.IntVar(&wdsi.ThreadNum, "thread", 30, "set thread num.")
 	wdsCmd.StringVar(&wdsi.Proxy, "proxy", "", "set proxy. (usage:--proxy http://127.0.0.1:8080)")
@@ -46,6 +48,7 @@ func Run(cmd []string) {
 	wasCmd.StringVar(&was.Target, "t", "", "set target(url)")
 	wasCmd.StringVar(&was.DirPath, "tF", "", "set target file path")
 	wasCmd.StringVar(&was.Proxy, "proxy", "", "set proxy. (usage:--proxy http://127.0.0.1:8080)")
+	wasCmd.StringVar(&was.Out, "out", "", "save result")
 
 	edtCmd := flag.NewFlagSet("edc", flag.ExitOnError)
 	edtCmd.StringVar(&was.Target, "t", "", "set target(url)")
@@ -58,12 +61,13 @@ func Run(cmd []string) {
 	fofaCmd.BoolVar(&fofaParam.IP, "ip", false, "get domain information via rule")
 	fofaCmd.BoolVar(&fofaParam.Title, "title", false, "get title information via rule")
 	fofaCmd.BoolVar(&fofaParam.Host, "host", false, "get host information via rule")
+	fofaCmd.StringVar(&fofaParam.Out, "out", "", "output path")
 
 	cfgCmd := flag.NewFlagSet("cfg", flag.ExitOnError)
 	cfgCmd.BoolVar(&cfg.GenConfig, "new", false, "create default config file.")
 
 	sdsCmd := flag.NewFlagSet("sds", flag.ExitOnError)
-	options := &runner.Options{}
+	options := &runner2.Options{}
 	sdsCmd.BoolVar(&options.Verbose, "v", false, "Show Verbose output")
 	sdsCmd.BoolVar(&options.NoColor, "nC", false, "Don't Use colors in output")
 	sdsCmd.IntVar(&options.Threads, "t", 10, "Number of concurrent goroutines for resolving")
@@ -97,13 +101,13 @@ func Run(cmd []string) {
 	switch cmd[1] {
 	case "webdirscan", "wds":
 		wdsCmd.Parse(cmd[2:])
-		webDirScan.WebDirScan(wdsi)
+		webDirScan.WebDirScan(wdsi, rootCtx)
 	case "webalivescan", "was":
 		wasCmd.Parse(cmd[2:])
 		webAliveScan.WebAliveScan(was)
 	case "subdomainscan", "sds":
 		sdsCmd.Parse(cmd[2:])
-		subDomainScan.SubDomainScan(options)
+		subfinder.SubDomainScan(options)
 	case "fofa":
 		fofaCmd.Parse(cmd[2:])
 		fofa.GetInfoByRule(fofaParam)

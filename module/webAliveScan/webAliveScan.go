@@ -4,6 +4,7 @@ import (
 	"GoBruteBa/common"
 	"bufio"
 	"crypto/tls"
+	"fmt"
 	"github.com/kataras/golog"
 	"io/ioutil"
 	"log"
@@ -11,7 +12,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,12 +22,21 @@ var (
 	httpPool *sync.Pool
 	fproxy   string
 	tr       *http.Transport
+	fp       *os.File
+	err      error
 )
 
 func WebAliveScan(was common.WebAliveScanType) {
 	wg := new(sync.WaitGroup)
+	if was.Out != "" {
+		fp, err = os.OpenFile(was.Out, os.O_CREATE|os.O_RDWR, 744)
+		if err != nil {
+			log.Println("webAliveScan.go line:33 error:", err)
+			return
+		}
+	}
 	if was.Proxy != "" {
-		p := func(_ *http.Request) (*url.URL, error) { return url.Parse("http://127.0.0.1:8080") }
+		p := func(_ *http.Request) (*url.URL, error) { return url.Parse(was.Proxy) }
 		tr.Proxy = p
 	}
 	if was.Target != "" {
@@ -36,6 +45,7 @@ func WebAliveScan(was common.WebAliveScanType) {
 		webAliveScanMulti(was, wg)
 	}
 	wg.Wait()
+	defer fp.Close()
 }
 
 func handlerParam(targets []string, targetchan chan string, wg *sync.WaitGroup) {
@@ -112,13 +122,15 @@ func webAliveScanMulti(was common.WebAliveScanType, wg *sync.WaitGroup) {
 				}
 				httpPool.Put(Client)
 				//发送一个不存在的页面来获取指纹信息
-				//req.URL,err = url.Parse(t+"/_gobruteba")
-				//if err != nil {
-				//	t, ok = <-targetchan
-				//	continue
-				//}
-				//respSec, err := Client.Do(req)
-				handlerResult(resp, t)
+				req.URL, err = url.Parse(t + "/_gobruteba")
+				if err != nil {
+					t, ok = <-targetchan
+					continue
+				}
+				respSec, err := Client.Do(req)
+
+				handlerResult(resp, respSec, t)
+
 				t, ok = <-targetchan
 			}
 			wg.Done()
@@ -126,49 +138,103 @@ func webAliveScanMulti(was common.WebAliveScanType, wg *sync.WaitGroup) {
 	}
 }
 
-func handlerResult(resp *http.Response, t string) {
-	var resultstring string = " URL[\x1b[36m" + t + "\x1b[0m]"
-	Status := strconv.Itoa(resp.StatusCode)
-	resultstring = resultstring + " Status[\x1b[35m" + Status + "\x1b[0m]"
-	Length := strconv.Itoa(int(resp.ContentLength))
-	if Length != "-1" {
-		resultstring = resultstring + " Length[\x1b[34m" + Length + "\x1b[0m]"
-	}
+type WASResult struct {
+	URL           string
+	Title         string
+	StatusCode    int
+	ContentLength int
+	Server        string
+	Application   []string
+}
 
-	serv := resp.Header.Get("Server")
-	if serv != "" {
-		resultstring = resultstring + " Server[\x1b[33m" + serv + "\x1b[0m]"
+func (this *WASResult) String() string {
+	var app string
+	for _, v := range this.Application {
+		app += "[" + v + "]"
 	}
+	return fmt.Sprintf("URL:%s   Title:%s   StatusCode:%d   ContentLength:%d   Server:%s   Application:%s",
+		this.URL, this.Title, this.StatusCode, this.ContentLength, this.Server, app)
+}
 
-	Cookie := resp.Header.Get("Set-Cookie")
-	if Cookie != "" {
-		if strings.Contains(Cookie, "rememberMe") {
-			resultstring = resultstring + " Application[\x1b[32mShiro\x1b[0m]]"
+func (this *WASResult) ColorString() string {
+	var app string
+	var totalStr string
+	totalStr = fmt.Sprintf("URL[\x1b[36m%s\x1b[0m] StatusCode[\x1b[32m%d\x1b[0m] ContentLength[\x1b[32m%d\x1b[0m] ", this.URL, this.StatusCode, this.ContentLength)
+
+	if this.Server != "" {
+		totalStr += "Server[\x1b[32m" + this.Server + "\x1b[0m] "
+	}
+	if this.Title != "" {
+		totalStr += "Title[\x1b[32m" + this.Title + "\x1b[0m] "
+	}
+	if this.Application != nil {
+		for _, v := range this.Application {
+			app += "[" + v + "]"
+		}
+		totalStr += "Application\x1b[32m" + app + "\x1b[0m "
+	}
+	return totalStr
+}
+
+func handlerResult(resp *http.Response, respSecond *http.Response, t string) {
+	var rs WASResult
+	if resp != nil {
+		rs.URL = t
+		rs.StatusCode = resp.StatusCode
+
+		if resp.ContentLength != -1 {
+			rs.ContentLength = int(resp.ContentLength)
+		}
+		serv := resp.Header.Get("Server")
+		if serv != "" {
+			rs.Server = serv
+		}
+
+		Cookie := resp.Header.Get("Set-Cookie")
+		if Cookie != "" {
+			if strings.Contains(Cookie, "rememberMe") {
+				rs.Application = append(rs.Application, "Shiro")
+			}
+		}
+
+		title := ""
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+
+			exp := regexp.MustCompile(`<title>(.*?)</title>`)
+			result := exp.FindAllStringSubmatch(string(body), -1)
+			for _, text := range result {
+				title = text[1]
+			}
+		}
+		if title != "" {
+			rs.Title = title
 		}
 	}
 
-	title := ""
-	body, err := ioutil.ReadAll(resp.Body)
-	if err == nil {
-		//golog.Error("webAliveScan.go line:118",err)
-		//do nothing
-		exp := regexp.MustCompile(`<title>(.*?)</title>`)
-		result := exp.FindAllStringSubmatch(string(body), -1)
-		for _, text := range result {
-			title = text[1]
+	if fp != nil {
+		fp.WriteString(rs.String())
+		fp.WriteString("\n")
+	}
+	//处理第二个请求,定义一个数组，如果内容中包含了就确定为此应用
+	flagStr := [...]string{"Tomcat", "Java", "ASP.NET"}
+	if respSecond != nil {
+		body, err := ioutil.ReadAll(respSecond.Body)
+		if err != nil {
+			log.Println(rs.ColorString())
+			return
 		}
-	}
-	if title != "" {
-		resultstring = resultstring + " Title[\x1b[32m" + title + "\x1b[0m]"
-	}
-	//指纹处理
-	//body, err = ioutil.ReadAll(resp.Body)
-	//if err == nil {
-	//
-	//
-	//}
+		for _, v := range flagStr {
+			if strings.Contains(string(body), v) {
+				rs.Application = append(rs.Application, v)
+			}
+		}
 
-	log.Println(resultstring)
+		//for _,v :=  range respSecond.Header{
+		//
+		//}
+	}
+	log.Println(rs.ColorString())
 }
 
 func webAliveScanSingle(was common.WebAliveScanType) {
@@ -211,7 +277,16 @@ func webAliveScanSingle(was common.WebAliveScanType) {
 		return
 	}
 	defer resp.Body.Close()
-	handlerResult(resp, _url)
+	req.URL, err = url.Parse(strings.TrimSpace(_url) + "/_gobruteba")
+	if err != nil {
+		fmt.Println("webAliveScan.go line:267 err:", err)
+		return
+	}
+	respSec, err := client.Do(req)
+	if err != nil {
+		fmt.Println("webAliveScan.go line:272 err:", err)
+	}
+	handlerResult(resp, respSec, _url)
 }
 
 func readTargetFromFile(path string) []string {

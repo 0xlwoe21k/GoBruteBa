@@ -2,24 +2,31 @@ package webDirScan
 
 import (
 	"fmt"
-	"strings"
+	"net/http"
 	"testing"
 	"time"
 )
 
 func Test_putColorTest(t *testing.T) {
-	fmt.Printf("\033[32;40m%s\033[0m\n", "红色文字，黑色底哒")
-	fmt.Printf("\x1b[32m%s 32: 绿 \x1b[0m", "test")
 
-	tmpurl := "https://test.com//123"
-	oneurl := tmpurl[7:]
-	twourl := tmpurl[:7]
+	clenit := &http.Client{}
+	resp, _ := clenit.Get("http://www.baidu.com")
 
-	if strings.Contains(tmpurl[7:], "//") {
-		oneurl = strings.Replace(oneurl, "//", "/", -1)
+	for _, v := range resp.Header {
+		fmt.Println(v)
 	}
-
-	fmt.Println(twourl + oneurl)
+	//fmt.Printf("\033[32;40m%s\033[0m\n", "红色文字，黑色底哒")
+	//fmt.Printf("\x1b[32m%s 32: 绿 \x1b[0m", "test")
+	//
+	//tmpurl := "https://test.com//123"
+	//oneurl := tmpurl[7:]
+	//twourl := tmpurl[:7]
+	//
+	//if strings.Contains(tmpurl[7:], "//") {
+	//	oneurl = strings.Replace(oneurl, "//", "/", -1)
+	//}
+	//
+	//fmt.Println(twourl + oneurl)
 }
 
 //func Test_timer1(t *testing.T) {
